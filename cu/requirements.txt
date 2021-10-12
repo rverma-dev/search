@@ -1,4 +1,5 @@
 pymilvus==2.0.0rc6
 paddle_serving_app
 paddlepaddle==2.1.1
+apache-flink==1.14.0
 redis

@@ -1,0 +1,98 @@
+// Select the database to use.
+use('nsl_bet_db_soln');
+
+// Find books having a particular gsi
+// db.getCollection("nsl_book").find({"gsiList.id": {$eq: 297810952862}}).limit(1)
+
+// GSI in relation to Book
+db.getCollection("nsl_book").aggregate([
+    {
+        $project: {"nb": "$$ROOT", "_id": 0}
+    },
+    {
+        $lookup: {
+            localField: "nb.gsiList.id",
+            from: "nsl_gsi",
+            foreignField: "id",
+            as: "ng"
+        }
+    },
+    {
+        $unwind: {
+            path: "$ng",
+            preserveNullAndEmptyArrays: false
+        }
+    },
+    {
+        $match: {$and: [
+            {"nb.tenantId": {$eq: "BRF2008}},
+            {"nb.displayName": {$regex: "^((?!test).)*$", $options: "i"}},
+            {"nb.displayName": {$regex: "^((?!book).)*$", $options: "i"}},
+            {"ng.displayName": {$regex: "^((?!test).)*$", $options: "i"}}
+        ]}
+    },
+    {
+        $group: {
+            _id: {"nb᎐displayName": "$nb.displayName"},
+            "addToSet(ng_displayName)": {$addToSet: "$ng.displayName"}
+        }
+    },
+    {
+        $project: {"name": "$_id.nb᎐displayName", "gsis": "$addToSet(ng_displayName)", "_id": 0}
+    },
+]);
+
+// CU in relation to gsi and books
+db.getCollection("nsl_book").aggregate([
+    {
+        $project: {"nb": "$$ROOT", "_id": 0}
+    },
+    {
+        $lookup: {
+            localField: "nb.gsiList.id",
+            from: "nsl_gsi",
+            foreignField: "id",
+            as: "ng"
+        }
+    },
+    {
+        $unwind: {
+            path: "$ng",
+            preserveNullAndEmptyArrays: false
+        }
+    },
+    {
+        $lookup: {
+            localField: "ng.solutionLogic.referencedChangeUnit",
+            from: "nsl_change_unit",
+            foreignField: "id",
+            as: "cu"
+        }
+    },
+    {
+        $unwind: {
+            path: "$cu",
+            preserveNullAndEmptyArrays: false
+        }
+    },
+    {
+        $addFields: {"bookId": "$nb.displayName", "gsiId": "$ng.displayName", "bookName": "$nb.displayName", "gsiName": "$ng.displayName", "cuName": "$cu.displayName"}
+    },
+    {
+        $match: {$and: [
+                {"nb.tenantId": {$eq: "callhealthdemo"}},
+                {"nb.displayName": {$regex: "^((?!test).)*$", $options: "i"}},
+                {"nb.displayName": {$regex: "^((?!book).)*$", $options: "i"}},
+                {"ng.displayName": {$regex: "^((?!test).)*$", $options: "i"}}
+            ]}
+    },
+    {
+        $group: {
+            _id: {"bookId": "$bookId", "gsiId": "$gsiId"},
+            "addToSet(cu_name)": {$addToSet: "$cu.displayName"}
+        }
+    },
+    {
+        $project: {"bookId": "$_id.bookId", "gsiId": "$_id.gsiId", "cuId": "$addToSet(cu_name)", "bookName": "$nb.displayName", "gsiName": "$ng.displayName", "cuName": "$cu.displayName", "_id": 0}
+    }
+]);

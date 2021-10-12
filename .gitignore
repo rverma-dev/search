@@ -129,4 +129,4 @@ dmypy.json
 .pyre/
 .idea
 volumes
-search/models/movie/user_vector_model
+movie/model
