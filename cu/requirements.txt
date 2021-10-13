@@ -1,5 +1,13 @@
 pymilvus==2.0.0rc6
-paddle_serving_app
-paddlepaddle==2.1.1
-apache-flink==1.14.0
-redis
+pymongo==3.12.0
+numpy==1.21.2
+scikit-learn==1.0.0
+tokenizers==0.11.0
+scipy==1.7.1
+sentence_transformers
+
+# paddle_serving_app
+# paddlepaddle==2.1.1
+# flask
+# flask_restful
+# flask-cors
