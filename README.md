@@ -1,189 +1,161 @@
-# Quick Start
+## README
 
-This project combines Milvus and [PaddleRec](https://aistudio.baidu.com/aistudio/projectdetail/1481839?channel=0&channelType=0&lang=en) to build the recall service of a movie recommender system.
+This project uses Milvus and Bert to build a Text Search Engine. In this project, Bert is used to convert the text into a fixed-length vector and store it in Milvus, and then combine Milvus to search for similar text in the text entered by the user.
 
-## Data description
+### Data source
 
-[MovisLens](https://grouplens.org/datasets/movielens/) is a dataset on movie ratings, with data from movie rating sites such as IMDB. The dataset contains information about users' ratings of movies, users' demographic characteristics and descriptive features of movies, which is suitable for getting started with recommender systems.
+The dataset needed for this system is a **CSV** format file which needs to contain a column of titles and a column of texts.
 
-In this project, we use one of the sub-datasets — [MovieLens 1M](https://grouplens.org/datasets/movielens/1m/). This dataset contains 1,000,209 anonymous ratings of approximately 3,900 movies  made by 6,040 MovieLens users. 
+## How to deploy the system
 
-The model already trained only uses  `user.dat` to query existed users. In addtition, the model generates vectors of movies in `movie.dat`, and we load these vectors into Milvus. After passing in new user information(gender, age, and occupation), the next step is to extract features and recall in Milvus. Then the system goes through positive sorting(checking movies), and sorting to recommend the most suitable movies.
+### 1. Start Milvus and MySQL
 
-#### users.dat
+The system will use Milvus to store and search the feature vector data, and Mysql is used to store the correspondence between the ids returned by Milvus and the text data  , then you need to start Milvus and Mysql first.
 
-UserID::Gender::Age::Occupation::Zip-code
+- **Start Milvus v2.0**
 
-All demographic information is provided voluntarily by the users and is
-not checked for accuracy.  Only users who have provided some demographic
-information are included in this data set.
+First, you are supposed to refer to the Install Milvus v2.0 for how to run Milvus docker.
 
-- Gender is denoted by a "M" for male and "F" for female
-- Age is chosen from the following ranges:
+```
+$ wget https://raw.githubusercontent.com/milvus-io/milvus/master/deployments/docker/standalone/docker-compose.yml -O docker-compose.yml
+$ sudo docker-compose up -d
+Docker Compose is now in the Docker CLI, try `docker compose up`
+Creating milvus-etcd  ... done
+Creating milvus-minio ... done
+Creating milvus-standalone ... done
 
-	*  1:  "Under 18"
-	* 18:  "18-24"
-	* 25:  "25-34"
-	* 35:  "35-44"
-	* 45:  "45-49"
-	* 50:  "50-55"
-	* 56:  "56+"
-- Occupation is chosen from the following choices:
+```
 
-	*  0:  "other" or not specified
-	*  1:  "academic/educator"
-	*  2:  "artist"
-	*  3:  "clerical/admin"
-	*  4:  "college/grad student"
-	*  5:  "customer service"
-	*  6:  "doctor/health care"
-	*  7:  "executive/managerial"
-	*  8:  "farmer"
-	*  9:  "homemaker"
-	* 10:  "K-12 student"
-	* 11:  "lawyer"
-	* 12:  "programmer"
-	* 13:  "retired"
-	* 14:  "sales/marketing"
-	* 15:  "scientist"
-	* 16:  "self-employed"
-	* 17:  "technician/engineer"
-	* 18:  "tradesman/craftsman"
-	* 19:  "unemployed"
-	* 20:  "writer"
+> Note the version of Milvus.
 
-#### movies.dat
+- **Start MySQL**
 
-MovieID::Title::Genres
+```
+$ docker run -p 3306:3306 -e MYSQL_ROOT_PASSWORD=123456 -d mysql:5.7
+```
 
-- Titles are identical to titles provided by the IMDB (including
-year of release)
-- Genres are pipe-separated
+### 2. Start Server
 
-- Some MovieIDs do not correspond to a movie due to accidental duplicate
-entries and/or test entries
-- Movies are mostly entered by hand, so errors and inconsistencies may exist
+The next step is to start the system server. It provides HTTP backend services, and there are two ways to start: running with Docker or source code.
 
-## Environments
+#### 2.2 Run source code
 
-1. Python 3.6/3.7
-2. [Milvus 2.0.0](https://milvus.io/docs/v2.0.0/install_standalone-docker.md)
+- **Install the Python packages**
 
-## How to start
+```
+$ cd server
+$ pip install -r requirement.txt
+```
 
-1. Start servers: milvus2.0 & redis
- 
-3. Pull the source code.
+- **Download the model**
 
-   ```shell
-   $ git clone https://github.com/milvus-io/bootcamp.git
-   $ cd solutions/recommender_system
-   ```
+The way to install Bert-as-service is as follows. You can also refer to the official website link of the Github repository of Bert-as-service:
 
-3. Install requirements.
+https://github.com/hanxiao/bert-as-service
 
-   ```shell
-   $ pip install -r requirements.txt
-   ```
+```
+# Download model
+$ cd model
+$ wget https://storage.googleapis.com/bert_models/2018_11_03/uncased_L-12_H-768_A-12.zip
+# start service
+$ bert-serving-start -model_dir uncased_L-12_H-768_A-12/ -num_worker=2
+```
 
-4. Modify config in `milvus_tool/config.py`
+- **Set configuration**
 
-   ```
-   MILVUS_HOST = 'localhost'
-   MILVUS_PORT = 19530
+```
+$ vim server/src/config.py
+```
 
-   dim = 32
-   pk = FieldSchema(name='pk', dtype=DataType.INT64, is_primary=True)
-   field = FieldSchema(name='embedding', dtype=DataType.FLOAT_VECTOR, dim=dim)
-   schema = CollectionSchema(fields=[pk, field], description="movie recommender: demo films")
+Please modify the parameters according to your own environment. Here listing some parameters that need to be set, for more information please refer to [config.py](https://github.com/miia12/bootcamp/blob/master/solutions/reverse_image_search/quick_deploy/server/src/config.py).
 
-   index_param = {
-       "metric_type": "L2",
-       "index_type":"IVF_FLAT",
-       "params":{"nlist":128}
-       }
-   
-   top_k = 10
-   search_params = {
-       "metric_type": "L2",
-       "params": {"nprobe": 10}
-       }
+| **Parameter**    | **Description**                                       | **Default setting** |
+| ---------------- | ----------------------------------------------------- | ------------------- |
+| MILVUS_HOST      | The IP address of Milvus, you can get it by ifconfig. | 127.0.0.1           |
+| MILVUS_PORT      | Port of Milvus.                                       | 19530               |
+| VECTOR_DIMENSION | Dimension of the vectors.                             | 2048                |
+| MYSQL_HOST       | The IP address of Mysql.                              | 127.0.0.1           |
+| MYSQL_PORT       | Port of Milvus.                                       | 3306                |
+| DEFAULT_TABLE    | The milvus and mysql default collection name.         | text_search         |
 
-   ```
 
-5. Prepare data (movie_vectors.txt, users.dat, movies.dat) & download models (rank_model, user_vector_model).
+- **Run the code**
 
-   ```shell
-   $ cd quick_deploy/movie_recommender
-   $ sh get_data.sh
-   ```
+Then start the server with Fastapi.
 
-6. Start recall and sorting service.
+```
+$ cd src
+$ python main.py
+```
+- **Code  structure**
 
-   ```shell
-   $ sh start_server.sh
-   ```
-   (May take a few seconds to start the service.)
+  If you are interested in our code or would like to contribute code, feel free to learn more about our code structure.
 
-## How to use
+  ```
+  └───server
+  │   │   Dockerfile
+  │   │   requirements.txt
+  │   │   main.py  # File for starting the program.
+  │   │
+  │   └───src
+  │       │   config.py  # Configuration file.
+  │       │   milvus_helpers.py  # Connect to Milvus server and insert/drop/query vectors in Milvus.
+  │       │   mysql_helpers.py   # Connect to MySQL server, and add/delete/query IDs and object information.
+  │       │   
+  │       └───operations # Call methods in milvus.py and mysql.py to insert/query/delete objects.
+  │               │   load.py
+  │               │   query.py
+  │               │   delete.py
+  │               │   count.py
+  ```
 
-1. Recommend movies.
 
-   ```shell
-   $ export PYTHONPATH=$PYTHONPATH:$PWD/proto
-   $ python test_client.py as M 32 5 # gender, age, and occupation
-   # Expected outputs
-   error {
-   code: 200
-   }
-   item_infos {
-     movie_id: "760"
-     title: "Stalingrad (1993)"
-     genre: "War"
-   }
-   item_infos {
-     movie_id: "632"
-     title: "Land and Freedom (Tierra y libertad) (1995)"
-     genre: "War"
-   }
-   item_infos {
-     movie_id: "1275"
-     title: "Highlander (1986)"
-     genre: "Action, Adventure"
-   }
-   ...
-   ```
+- **API docs** 
 
-2. Search movie information.
+Vist 127.0.0.1:5001/docs in your browser to use all the APIs.
 
-   ```shell
-   $ python test_client.py cm 600
-   # Expected outputs
-   error {
-     code: 200
-   }
-   item_infos {
-     movie_id: "600"
-     title: "Love and a .45 (1994)"
-     genre: "Thriller"
-   }
-   ```
+![1](pic/1.png)
 
-3. Search user information.
+**/text/load_data**
 
-   ```shell
-   $ python test_client.py um 10
-   # Expected outputs
-   error {
-     code: 200
-   }
-   user_info {
-     user_id: "10"
-     gender: "F"
-     age: 35
-     job: "1"
-     zipcode: "95370"
-   }
-   ```
+This API is used to import datasets into the system.
 
-   
+**/text/search**
+
+This API is used to get similar texts in the system.
+
+**/text/count**
+
+This API is used to get the number of the titles in the system.
+
+**/text/drop**
+
+This API is used to delete a specified collection.
+
+
+3、Start the UI client
+----------------------  
+Install  [Node.js 12+](https://nodejs.org/en/download/) and [Yarn](https://classic.yarnpkg.com/en/docs/install/).
+
+```
+$ cd client 
+# Install dependencies
+$ yarn install 
+#start yarn 
+$ yarn start   
+open localhost:3000
+```
+
+
+4、The interface display
+---------------------- 
+
+Enter 127.0.0.1:3000 in the browser to open the search page and enter the search text.Upload a **csv** file of the title and text
+
+![1](./pic/3.png)
+
+Get the search results of the input text, as shown in the figure
+
+![2](./pic/2.png)
+
+
