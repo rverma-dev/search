@@ -2,7 +2,18 @@ version: '3.5'
 
 services:
   server:
-    context: cu
+    build: ./server
+    ports:
+      - 5001:5001
+    links: 
+      - redis
+    environment:
+      REDIS_HOST: redis
+  redis:
+    container_name: redis
+    image: redis
+    ports:
+      - 6379:6379
   # etcd:
   #   container_name: milvus-etcd
   #   image: quay.io/coreos/etcd:v3.5.0
