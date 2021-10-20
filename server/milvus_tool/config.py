@@ -8,12 +8,12 @@ MILVUS_PORT = 19530
 dim = 32
 pk = FieldSchema(name='pk', dtype=DataType.INT64, is_primary=True)
 field = FieldSchema(name='embedding', dtype=DataType.FLOAT_VECTOR, dim=dim)
-schema = CollectionSchema(fields=[pk, field], description="movie recommendation: demo films")
+schema = CollectionSchema(fields=[pk, field], description="bet_recommendation_gsi")
 
 index_param = {
     "metric_type": "L2",
-    "index_type":"IVF_FLAT",
-    "params":{"nlist":128}
+    "index_type":"IVF_SQ8",
+    "params":{"nlist":1024}
     }
 
 top_k = 10
