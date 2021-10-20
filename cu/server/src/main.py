@@ -34,10 +34,10 @@ class BetType(Enum):
 
 
 @app.post('/text/count')
-async def count_text(table_name: str = None):
+async def count_text(bet_type: str = 'GSI'):
     # Returns the total number of titles in the system
     try:
-        num = do_count(table_name, MILVUS_CLI)
+        num = do_count(bet_type, MILVUS_CLI)
         LOGGER.info("Successfully count the number of entities!")
         return num
     except Exception as e:
@@ -46,10 +46,10 @@ async def count_text(table_name: str = None):
 
 
 @app.post('/text/drop')
-async def drop_tables(table_name: str = None):
+async def drop_tables(bet_type: str = 'GSI'):
     # Delete the collection of Milvus and Redis
     try:
-        status = do_drop(table_name, MILVUS_CLI, REDIS_CLI)
+        status = do_drop(bet_type, MILVUS_CLI, REDIS_CLI)
         LOGGER.info("Successfully drop tables in Milvus and MySQL!")
         return status
     except Exception as e:
@@ -58,7 +58,7 @@ async def drop_tables(table_name: str = None):
 
 
 @app.post('/text/load')
-async def load_text(file: UploadFile = File(...), table_name: str = None):
+async def load_text(file: UploadFile = File(...), bet_type: str = 'GSI'):
     try:
         text = await file.read()
         fname = file.filename
@@ -70,9 +70,9 @@ async def load_text(file: UploadFile = File(...), table_name: str = None):
             f.write(text)
     except Exception as e:
         return {'status': False, 'msg': 'Failed to load data.'}
-    # Insert all the image under the file path to Milvus/MySQL
+    # Insert all the docs under the file path to Milvus/betType
     try:
-        total_num = import_data(table_name, fname_path ,MILVUS_CLI, REDIS_CLI)
+        total_num = import_data(bet_type, fname_path ,MILVUS_CLI, REDIS_CLI)
         LOGGER.info("Successfully loaded data, total count: {}".format(total_num))
         return "Successfully loaded data!"
     except Exception as e:
@@ -81,9 +81,9 @@ async def load_text(file: UploadFile = File(...), table_name: str = None):
 
 
 @app.get('/text/search')
-async def do_search_api(table_name: str = None, query_sentence: str = None):
+async def do_search_api(bet_type: str = None, query_sentence: str = 'GSI'):
     try:
-        ids,title, text, distances = search_in_milvus(table_name,query_sentence, MILVUS_CLI, REDIS_CLI)
+        ids,title, text, distances = search_in_milvus(bet_type,query_sentence, MILVUS_CLI, REDIS_CLI)
         res = []
         for p, d in zip(title, text):
             dicts = {'title': p, 'content':d}

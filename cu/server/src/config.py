@@ -21,5 +21,5 @@ MONGO_PWD = os.getenv("MONGO_PWD", "bet@123")
 MONGO_DB = os.getenv("MONGO_DB", "nsl_bet_db_soln")
 
 ############### Number of log files ###############
-LOGS_NUM = int(os.getenv("logs_num", 0))
-LOG_LEVEL = os.getenv("LOG_LEVEL", "warn")
+LOGS_NUM = int(os.getenv("logs_num", 1))
+LOG_LEVEL = os.getenv("LOG_LEVEL", "info")

@@ -7,7 +7,7 @@ from functools import reduce
 
 
 sys.path.append("..")
-from config import TOP_K, DEFAULT_TABLE
+from config import TOP_K
 from logs import LOGGER
 
 
@@ -24,18 +24,16 @@ def normaliz_vec(vec_list):
         vec_list[i] = vec
     return vec_list
 
-def search_in_milvus(table_name, query_sentence,milvus_cli, mysql_cli):
-    if not table_name:
-        table_name = DEFAULT_TABLE
+def search_in_milvus(bet_type, query_sentence,milvus_cli, mysql_cli):
     try:
         query_data = [query_sentence]
         vectors = bc.encode(query_data) 
         query_list = normaliz_vec(vectors.tolist())
         LOGGER.info("Successfully insert query list")
-        results = milvus_cli.search_vectors(table_name,query_list,TOP_K)
+        results = milvus_cli.search_vectors(bet_type,query_list,TOP_K)
         vids = [str(x.id) for x in results[0]]
         print("-----------------", vids)
-        ids,title,text= mysql_cli.search_by_milvus_ids(vids, table_name)
+        ids,title,text= mysql_cli.search_by_milvus_ids(vids, bet_type)
         distances = [x.distance for x in results[0]]
         return ids,title, text, distances
     except Exception as e:
