@@ -1,43 +1,30 @@
-import enum
 import uvicorn
-import sys
 import os
-import os.path as path
-from logs import LOGGER
 from fastapi import FastAPI, File, UploadFile
-from starlette.middleware.cors import CORSMiddleware
-from starlette.responses import FileResponse
-import numpy as np
 from milvus_helpers import MilvusHelper
 from redis_helpers import RedisHelper
+from logs import LOGGER
 from operations.load import import_data
 from operations.search import search_in_milvus
 from operations.count import do_count
 from operations.drop import do_drop
-from typing import Optional
 from enum import Enum
 
 
 app = FastAPI()
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"])
 MILVUS_CLI = MilvusHelper()
 REDIS_CLI = RedisHelper()
 
 class BetType(Enum):
-    CU = 'cu#'
-    GSI = 'gsi#'
+    CU = 'cu'
+    GSI = 'gsi'
 
 
 @app.post('/text/count')
-async def count_text(bet_type: str = 'GSI'):
+async def count_text(bet: BetType):
     # Returns the total number of titles in the system
     try:
-        num = do_count(bet_type, MILVUS_CLI)
+        num = do_count(bet, MILVUS_CLI)
         LOGGER.info("Successfully count the number of entities!")
         return num
     except Exception as e:
@@ -46,11 +33,11 @@ async def count_text(bet_type: str = 'GSI'):
 
 
 @app.post('/text/drop')
-async def drop_tables(bet_type: str = 'GSI'):
+async def drop_tables(bet: BetType):
     # Delete the collection of Milvus and Redis
     try:
-        status = do_drop(bet_type, MILVUS_CLI, REDIS_CLI)
-        LOGGER.info("Successfully drop tables in Milvus and MySQL!")
+        status = do_drop(bet, MILVUS_CLI, REDIS_CLI)
+        LOGGER.info("Successfully drop tables in Milvus and Redis!")
         return status
     except Exception as e:
         LOGGER.error(e)
@@ -58,7 +45,7 @@ async def drop_tables(bet_type: str = 'GSI'):
 
 
 @app.post('/text/load')
-async def load_text(file: UploadFile = File(...), bet_type: str = 'GSI'):
+async def load_text(bet: BetType, file: UploadFile = File(...)):
     try:
         text = await file.read()
         fname = file.filename
@@ -72,7 +59,7 @@ async def load_text(file: UploadFile = File(...), bet_type: str = 'GSI'):
         return {'status': False, 'msg': 'Failed to load data.'}
     # Insert all the docs under the file path to Milvus/betType
     try:
-        total_num = import_data(bet_type, fname_path ,MILVUS_CLI, REDIS_CLI)
+        total_num = import_data(bet.value, fname_path ,MILVUS_CLI, REDIS_CLI)
         LOGGER.info("Successfully loaded data, total count: {}".format(total_num))
         return "Successfully loaded data!"
     except Exception as e:
@@ -81,12 +68,12 @@ async def load_text(file: UploadFile = File(...), bet_type: str = 'GSI'):
 
 
 @app.get('/text/search')
-async def do_search_api(bet_type: str = None, query_sentence: str = 'GSI'):
+async def do_search_api(bet: BetType, query_sentence: str = None):
     try:
-        ids,title, text, distances = search_in_milvus(bet_type,query_sentence, MILVUS_CLI, REDIS_CLI)
+        ids,title, distances = search_in_milvus(bet,query_sentence, MILVUS_CLI, REDIS_CLI)
         res = []
-        for p, d in zip(title, text):
-            dicts = {'title': p, 'content':d}
+        for p, d in zip(title, distances):
+            dicts = {'title': p, 'similarity':d}
             res+=[dicts]
         LOGGER.info("Successfully searched similar text!")
         return res

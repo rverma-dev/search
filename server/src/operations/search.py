@@ -35,7 +35,7 @@ def search_in_milvus(bet_type, query_sentence,milvus_cli, mysql_cli):
         print("-----------------", vids)
         ids,title,text= mysql_cli.search_by_milvus_ids(vids, bet_type)
         distances = [x.distance for x in results[0]]
-        return ids,title, text, distances
+        return ids,title, distances
     except Exception as e:
         LOGGER.error(" Error with search : {}".format(e))
         sys.exit(1)

@@ -1,7 +1,7 @@
 import os
 
 ############### Milvus Configuration ###############
-MILVUS_HOST = os.getenv("MILVUS_HOST", "127.0.0.1")
+MILVUS_HOST = os.getenv("MILVUS_HOST", "afac1ec1ad6154e69876c8e916ddf9e5-2af2fbf688d30cb6.elb.ap-south-1.amazonaws.com")
 MILVUS_PORT = int(os.getenv("MILVUS_PORT", 19530))
 VECTOR_DIMENSION = int(os.getenv("VECTOR_DIMENSION", 768))
 INDEX_FILE_SIZE = int(os.getenv("INDEX_FILE_SIZE", 1024))
@@ -9,8 +9,8 @@ METRIC_TYPE = os.getenv("METRIC_TYPE", "IP")
 TOP_K = int(os.getenv("TOP_K", 9))
 
 ############### REDIS Configuration ###############
-REDIS_HOST = os.getenv("REDIS_HOST", "10.220.98.254")
-REDIS_PORT = os.getenv("REDIS_PORT", 2379)
+REDIS_HOST = os.getenv("REDIS_HOST", "127.0.0.1")
+REDIS_PORT = os.getenv("REDIS_PORT", 6379)
 REDIS_PWD = os.getenv("REDIS_PWD", None)
 
 ############### MONGO Configuration ###############
