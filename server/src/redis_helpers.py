@@ -52,21 +52,14 @@ class RedisHelper():
     # Delete all the data in redis db by bet type
     def delete_all_data(self, key_prefix):
         self.test_connection()
-        scan_count = redis.register_script(
-            """
-            local result = redis.call('SCAN', ARGV[1], 'MATCH', ARGV[2], 'COUNT', ARGV[3])
-            result[2] = #result[2]
-            return result
-            """
-        )
         pattern = key_prefix + '*'
         cursor = '0'
         try:
-            cursor, count = scan_count(args=["0", pattern, 100])
-            while cursor != "0":
-                cursor, count_delta = scan_count(args=[cursor, pattern, 100])
-                count += count_delta
-            return count
+            while cursor != 0:
+                cursor, keys = self.conn.scan(cursor=cursor, match=pattern, count=100)
+                if keys:
+                    self.conn.delete(*keys)
+            return 'ok'
         except Exception as e:
             LOGGER.error("Redis ERROR: {} with drop, bet: {}".format(e,key_prefix))
             sys.exit(1)
