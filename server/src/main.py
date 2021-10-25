@@ -9,6 +9,7 @@ from operations.search import search_in_milvus
 from operations.count import do_count
 from operations.drop import do_drop
 from bets import BetType
+import traceback
 
 
 app = FastAPI()
@@ -65,7 +66,7 @@ async def load_text(bet: BetType, file: UploadFile = File(...)):
 @app.get('/text/search')
 async def do_search_api(bet: BetType, query_sentence: str = None):
     try:
-        ids,title, distances = search_in_milvus(bet,query_sentence, MILVUS_CLI, REDIS_CLI)
+        title, distances = search_in_milvus(bet,query_sentence, MILVUS_CLI, REDIS_CLI)
         res = []
         for p, d in zip(title, distances):
             dicts = {'title': p, 'similarity':d}

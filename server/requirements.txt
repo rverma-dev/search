@@ -1,6 +1,5 @@
-keras==2.6.0
-numpy==1.19.5
-futures==3.1.1
+keras
+numpy
 cryptography
 aiofiles
 pillow==8.3.2
@@ -11,4 +10,4 @@ pymongo==3.12.0
 fastapi==0.70.0  
 uvicorn==0.15.0
 python-multipart==0.0.5
-redis==3.5.3
+redis

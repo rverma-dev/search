@@ -1,4 +1,5 @@
 import sys
+from numpy.core.fromnumeric import size
 from pymilvus import *
 from config import MILVUS_HOST, MILVUS_PORT, VECTOR_DIMENSION,  METRIC_TYPE
 from logs import LOGGER
@@ -29,7 +30,6 @@ class MilvusHelper:
     def has_collection(self, collection_name):
         try:
             status = utility.has_collection(collection_name)
-            print(",,,,,,,,,,,,",status)
             return status
         except Exception as e:
             LOGGER.error("Failed to load data to Milvus: {}".format(e))
@@ -39,8 +39,8 @@ class MilvusHelper:
     def create_collection(self, collection_name):
         try:
             if not self.has_collection(collection_name):
-                field1 = FieldSchema(name="id", dtype=DataType.INT64, descrition="int64", is_primary=True,auto_id=True)
-                field2 = FieldSchema(name="embedding", dtype=DataType.FLOAT_VECTOR, descrition="float vector", dim=VECTOR_DIMENSION, is_primary=False)
+                field1 = FieldSchema(name="id", dtype=DataType.INT64, descrition="int64", is_primary=True,auto_id=False)
+                field2 = FieldSchema(name="embedding", dtype=DataType.FLOAT_VECTOR, descrition="float vector", dim=VECTOR_DIMENSION)
                 schema = CollectionSchema(fields=[ field1,field2], description="collection description")
                 self.collection = Collection(name=collection_name, schema=schema)   
                 LOGGER.debug("Create Milvus collection: {}".format(self.collection))
@@ -50,12 +50,11 @@ class MilvusHelper:
             sys.exit(1)
 
     # Batch insert vectors to milvus collection
-    def insert(self, collection_name, vectors):
+    def insert(self, collection_name, vectors, ids):
         try:
             self.create_collection(collection_name)
             self.collection = Collection(name=collection_name)
-            data = [vectors]
-            mr = self.collection.insert(data)
+            mr = self.collection.insert(data=[ids, vectors])
             ids =  mr.primary_keys
             self.collection.load()
             LOGGER.debug(
@@ -69,7 +68,7 @@ class MilvusHelper:
     def create_index(self, collection_name):
         try: 
             self.set_collection(collection_name)
-            default_index= {"index_type": "IVF_SQ8", "metric_type": METRIC_TYPE, "params": {"nlist": 16384}}
+            default_index= {"index_type": "IVF_SQ8", "metric_type": METRIC_TYPE, "params": {"nlist": 1024}}
             status= self.collection.create_index(field_name="embedding", index_params=default_index)
             if not status.code:
                 LOGGER.debug(
@@ -97,9 +96,8 @@ class MilvusHelper:
        # status = utility.list_collections()
         try:
             self.set_collection(collection_name)
-            search_params = {"metric_type":  METRIC_TYPE, "params": {"nprobe": 16}}
+            search_params = {"metric_type":  METRIC_TYPE, "params": {"nprobe": 20}}
             res=self.collection.search(vectors, anns_field="embedding", param=search_params, limit=top_k)
-            print(res[0])
             LOGGER.debug("Successfully search in collection: {}".format(res))
             return res
         except Exception as e:

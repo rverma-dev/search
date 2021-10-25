@@ -1,6 +1,0 @@
-{
-    "python.terminal.activateEnvInCurrentTerminal": true,
-    "python.linting.pylintEnabled": true,
-    "python.linting.enabled": true,
-    "python.linting.pylintArgs": ["--errors-only"]
-}

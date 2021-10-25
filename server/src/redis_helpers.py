@@ -7,60 +7,68 @@ from logs import LOGGER
 class RedisHelper():
     def __init__(self):
         self.conn = redis.StrictRedis(
-            host=REDIS_HOST, port=REDIS_PORT, auth=REDIS_PWD)
+            host=REDIS_HOST, port=REDIS_PORT)
 
     def test_connection(self):
         try:
             self.conn.ping()
         except:
             self.conn = redis.StrictRedis(
-                host=REDIS_HOST, port=REDIS_PORT, auth=REDIS_PWD)
+                host=REDIS_HOST, port=REDIS_PORT)
 
     # Batch insert (Milvus_ids, bet data) to redis
-    def load_data_to_redis(self, data, betType):
+    def load_data_to_redis(self, key_prefix, data ):
         self.test_connection()
         # 0|Health insurance_377|CustomerPortal_HealthInsurance|['Customer Menu Options', 'Customer Accessing Portal']
         try:
             pipe = self.conn.pipeline()
             for i in range(len(data['gsiId'])):
-                temp = {"gsi": data['gsiName'][i], "cus": data['cuNames'][i]}
-                pipe.set(betType + int(data['gsiId'][i]), json.dumps(temp))
+                pipe.set('{}#{}'.format(key_prefix, int(data['gsiId'][i])), data['gsiName'][i])
                 pipe.execute()
         except Exception as e:
             LOGGER.error("Redis ERROR: {} with bulk insert: {}".format(e,data['gsiId'][0]))
             sys.exit(1)
 
     # Get the bet data according to the milvus ids
-    def search_by_milvus_ids(self, ids, betType):
+    def search_by_milvus_ids(self, ids, key_prefix):
         self.test_connection()
-        key = betType + ids
+        keys = [key_prefix + x for x in ids]
         try:
-            return self.conn.get(key)
+            return self.conn.mget(keys)
         except Exception as e:
-            LOGGER.error("Redis ERROR: {} with lookup, key: {}".format(e, key))
+            LOGGER.error("Redis ERROR: {} with lookup, key: {}".format(e, keys))
             sys.exit(1)
 
-    # Delete redis table if exists
-    def delete_keys(self, ids, betType):
+    # Delete redis key if exists
+    def delete_keys(self, ids, key_prefix):
         self.test_connection()
-        key = betType + ids
+        keys = [key_prefix + x for x in ids]
         try:
-            self.conn.delete(key)
+            self.conn.delete(keys)
         except Exception as e:
-            LOGGER.error("Redis ERROR: {} with deleteion, key: {}".format(e, key))
+            LOGGER.error("Redis ERROR: {} with deleteion, key: {}".format(e, keys))
             sys.exit(1)
 
     # Delete all the data in redis db by bet type
-    def delete_all_data(self, betType):
+    def delete_all_data(self, key_prefix):
         self.test_connection()
-        pattern = betType + '*'
+        scan_count = redis.register_script(
+            """
+            local result = redis.call('SCAN', ARGV[1], 'MATCH', ARGV[2], 'COUNT', ARGV[3])
+            result[2] = #result[2]
+            return result
+            """
+        )
+        pattern = key_prefix + '*'
         cursor = '0'
         try:
-            cursor, data = self.conn.scan(cursor, pattern, 100)
-            for key in data:
-                self.conn.delete(key)
+            cursor, count = scan_count(args=["0", pattern, 100])
+            while cursor != "0":
+                cursor, count_delta = scan_count(args=[cursor, pattern, 100])
+                count += count_delta
+            return count
         except Exception as e:
-            LOGGER.error("Redis ERROR: {} with drop, bet: {}".format(e,betType))
+            LOGGER.error("Redis ERROR: {} with drop, bet: {}".format(e,key_prefix))
             sys.exit(1)
 
     # Get the number of redis table
