@@ -57,6 +57,7 @@ async def load_text(bet: BetType, file: UploadFile = File(...)):
     try:
         total_num = import_data(bet, fname_path ,MILVUS_CLI, REDIS_CLI)
         LOGGER.info("Successfully loaded data, total count: {}".format(total_num))
+        os.remove(fname_path)
         return "Successfully loaded data!"
     except Exception as e:
         LOGGER.error(e)

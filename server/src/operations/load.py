@@ -7,7 +7,7 @@ from functools import reduce
 import pandas as pd
 from bets import BetType
 from ast import literal_eval
-from sentence_transformers import SentenceTransformer
+from sentence_transformers import SentenceTransformer, util
 from sklearn.preprocessing import normalize
 
 sys.path.append("..")
