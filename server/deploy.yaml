@@ -20,7 +20,10 @@ spec:
     spec:
       containers:
         - name: app
-          image: '660124699787.dkr.ecr.ap-south-1.amazonaws.com/vector-search:0.0.1'
+          image: '660124699787.dkr.ecr.ap-south-1.amazonaws.com/vector-search:0.0.2'
+          env:
+            - name: ENV_REDIS_HOST
+              value: 'redis-master'
           ports:
             - name: http
               containerPort: 5001
@@ -43,3 +46,53 @@ spec:
   selector:
     app: vector-search
   type: ClusterIP
+---
+apiVersion: apps/v1 
+kind: Deployment
+metadata:
+  name: redis-master 
+  labels:
+    app: redis       
+spec:
+  selector:
+    matchLabels:    
+      app: redis
+      role: master
+      tier: backend
+  replicas: 1       
+  template:         
+    metadata:
+      labels: 
+        app: redis
+        role: master
+        tier: backend
+    spec: 
+      containers:
+      - name: master
+        image: redis
+        resources:
+          requests:
+            cpu: 100m
+            memory: 100Mi
+          limits:
+            cpu: 1000m
+            memory: 2Gi  
+        ports:
+        - containerPort: 6379
+---        
+apiVersion: v1
+kind: Service 
+metadata:
+  name: redis-master
+  labels:
+    app: redis
+    role: master
+    tier: backend
+spec:
+  ports:
+  - port: 6379 
+    targetPort: 6379
+  selector:
+    app: redis
+    role: master
+    tier: backend  
