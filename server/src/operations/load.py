@@ -6,6 +6,7 @@ import traceback
 from bert_serving.client import BertClient
 from functools import reduce
 import pandas as pd
+from bets import BetType
 
 sys.path.append("..")
 from config import TOP_K
@@ -37,7 +38,7 @@ def format_data(ids, title_data, text_data):
 
 
 # Import vectors to Milvus and data to Redis respectively
-def import_data(bet, collection_name, file_dir,milvus_cli, redis_cli):        
+def import_data(bet: BetType, file_dir,milvus_cli, redis_cli):        
     data = pd.read_csv(file_dir)
     title_data = data['title'].tolist()
     text_data = data['text'].tolist()

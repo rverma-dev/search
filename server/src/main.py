@@ -8,17 +8,12 @@ from operations.load import import_data
 from operations.search import search_in_milvus
 from operations.count import do_count
 from operations.drop import do_drop
-from enum import Enum
+from bets import BetType
 
 
 app = FastAPI()
 MILVUS_CLI = MilvusHelper()
 REDIS_CLI = RedisHelper()
-
-class BetType(Enum):
-    CU = 'cu'
-    GSI = 'gsi'
-
 
 @app.post('/text/count')
 async def count_text(bet: BetType):
@@ -49,7 +44,7 @@ async def load_text(bet: BetType, file: UploadFile = File(...)):
     try:
         text = await file.read()
         fname = file.filename
-        dirs = "data"
+        dirs = "data/" + bet.value
         if not os.path.exists(dirs):
             os.makedirs(dirs)
         fname_path = os.path.join(os.getcwd(), os.path.join(dirs, fname))
@@ -59,7 +54,7 @@ async def load_text(bet: BetType, file: UploadFile = File(...)):
         return {'status': False, 'msg': 'Failed to load data.'}
     # Insert all the docs under the file path to Milvus/betType
     try:
-        total_num = import_data(bet.value, fname_path ,MILVUS_CLI, REDIS_CLI)
+        total_num = import_data(bet, fname_path ,MILVUS_CLI, REDIS_CLI)
         LOGGER.info("Successfully loaded data, total count: {}".format(total_num))
         return "Successfully loaded data!"
     except Exception as e:
