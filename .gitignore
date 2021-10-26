@@ -131,3 +131,4 @@ model/
 .idea
 volumes
 movie/model
+**/kaggle.json
