@@ -132,3 +132,4 @@ model/
 volumes
 movie/model
 **/kaggle.json
+**/emails.csv
