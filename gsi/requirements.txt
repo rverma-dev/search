@@ -1,6 +1,6 @@
 pymilvus==2.0.0rc8
 pymongo==3.12.1
-numpy==1.19.5
+numpy==1.22.0
 pillow==8.3.2
 sentence-transformers==2.0.0
 redis==3.5.3
